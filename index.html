@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>GraphQL in Python</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/white.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+        <style type="text/css">
+            .reveal .header
+            {
+                position: absolute;
+                right: 20px;
+                bottom: 15px;
+                width: 25%;
+                height: 8%;
+                text-align: right;
+                font-size: 10px;
+            }
+        </style>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+                    <h1>GraphQL in Python</h1>
+                    <p>
+                        <small>Alex Chamberlain</small>
+                    </p>
+                </section>
+                <section>
+    				<section>
+                        <h2>Objective</h2>
+                        <p>
+                            Inspire you to investigate writing GraphQL
+                            servers in Python, including sign posting
+                            you towards open source libraries available.
+                        </p>
+                    </section>
+                    <section>
+                        <h2>What is GraphQL</h2>
+                        <blockquote>
+                        GraphQL is a query language for your API, and a server-side runtime for
+                        executing queries by using a type system you define for your data. GraphQL
+                        isn’t tied to any specific database or storage engine and is instead backed by
+                        your existing code and data.
+                        </blockquote>
+                        <p>– <a href="https://graphql.org/learn/">https://graphql.org/learn/</a></p>
+                    </section>
+                    <section>
+                        <h2>Why shouldn't we use GraphQL?</h2>
+                        <ul>
+                            <li>Largely a JS eco-system</li>
+                            <li>Many examples conflate the schema with business logic</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2>Why should we use GraphQL?</h2>
+                        <ul>
+                            <li>(Becoming) Industry Standard</li>
+                            <li>Strongly typed schema</li>
+                            <li>No more overfetching/underfetching</li>
+                            <li>Rapid product development</li>
+                            <li>Composable</li>
+                            <li>Rich eco-system</li>
+                        </ul>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h2>Python Support</h2>
+                        <ul>
+                            <li><a href="https://github.com/graphql-python/graphql-core">graphql-core</a>: GraphQL base implementation for Python</li>
+                            <li><a href="https://github.com/graphql-python/flask-graphql">flask-graphql</a>, <a href="https://github.com/graphql-python/sanic-graphql">sanic-graphql</a>, <a href="https://github.com/graphql-python/graphene-django">graphene-django</a>: Integration with common frameworks</li>
+                            <li><a href="https://github.com/syrusakbary/aiodataloader">aiodataloader</a>: A generic utility to be used as part of your application’s data fetching layer to provide a simplified and consistent API over various remote data sources such as databases or web services via batching and caching.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2>Schema First Development</h2>
+                        <ul>
+                            <li>Strict contract upfront</li>
+                            <li>Clear separation of concerns: contract and business logic.</li>
+                        </ul>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h2>Illustrative example: the City API</h2>
+                        <ul>
+                            <li>Lookup city by name, geoname ID or country.</li>
+                            <li>Lookup country by ISO name.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2>The Schema</h2>
+<pre><code style="max-height: none">type Country {
+        iso: String!
+        name: String!
+
+        cities: [City!]!
+    }
+
+    type City {
+        geonameID: Int!
+        name: String!
+        latitude: Float!
+        longitude: Float!
+        population: Int!
+
+        country: Country!
+    }
+
+    type Query {
+        country(iso: String): Country!
+        city(name: String, geonameID: Int): City!    
+    }
+
+    schema {
+      query: Query
+    }
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>The Loader</h2>
+<pre><code style="max-height: none" class="python">from aiodataloader import DataLoader
+
+from .models import Country
+
+
+class CountryLoader(DataLoader):
+    def __init__(self, db):
+        super().__init__()
+        self.db = db
+
+    async def batch_load_fn(self, isos):
+        query = 'SELECT iso, name FROM country WHERE iso = any($1::text[])'
+        rows = await self.db.fetch(query, isos)
+        mapping = {
+            row['iso']: Country(
+                iso=row['iso'],
+                name=row['name']
+            ) for row in rows
+        }
+
+        return [mapping[i] for i in isos]
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>The Resolver</h2>
+<pre><code style="max-height: none" class="python">import os
+
+from .models import City
+
+
+def country_resolver(context, resolve_info, *, iso):
+    loader = resolve_info.context['request']['loaders']['country']
+    return loader.load(iso)
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>The Server</h2>
+<pre><code style="max-height: none" class="python">import os
+
+from .models import City
+
+
+def country_resolver(context, resolve_info, *, iso):
+    loader = resolve_info.context['request']['loaders']['country']
+    return loader.load(iso)
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>The Schema (2)</h2>
+<pre><code style="max-height: none" class="python">def build_schema():
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(dir_path, '../cities.graphql')) as f:
+        schema = make_executable_schema(
+            parse_schema(f.read()),
+            {
+                'Query': {
+                    'country': country_resolver,
+                    'city': city_resolver
+                },
+                'Country': {
+                    'cities': country_cities_resolver
+                },
+                'City': {
+                    'country': city_country_resolver
+                }
+            }
+        )
+
+    return schema
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>The Server</h2>
+<pre><code style="max-height: none" class="python">from sanic import Sanic
+
+app = Sanic()
+
+@app.listener('before_server_start')
+async def init_graphql(app, loop):
+    schema = build_schema()
+
+    app.add_route(
+        GraphQLView.as_view(
+            schema=schema,
+            executor=AsyncioExecutor(loop=loop),
+            graphiql=True
+        ),
+        '/graphql',
+        methods=['POST', 'OPTIONS']
+    )
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>Whole example</h2>
+                        <a href="">City API in Python</a>
+                    </section>
+                </section>
+                <section>
+                    <h2>Conclusion</h2>
+                    <ul>
+                        <li>GraphQL is fantastic way to define a contract
+                        between different parts of your system.</li>
+                        <li>The support in Python is awesome.</li>
+                    </ul>
+                </section>
+			</div>
+            <div class="header">
+                <img src='bloomberg-logo-black.svg'>
+            </div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+                width: 1920,
+                height: 1080,
+                controlsLayout: "edges",
+                history: "true",
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
