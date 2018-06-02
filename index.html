@@ -40,7 +40,7 @@
 				<section>
                     <h1>GraphQL in Python</h1>
                     <p>
-                        <small>Alex Chamberlain</small>
+                        <small>Alex Chamberlain, Team Leader @ Bloomberg LP</small>
                     </p>
                 </section>
                 <section>
@@ -53,7 +53,7 @@
                         </p>
                     </section>
                     <section>
-                        <h2>What is GraphQL</h2>
+                        <h2>What is GraphQL?</h2>
                         <blockquote>
                         GraphQL is a query language for your API, and a server-side runtime for
                         executing queries by using a type system you define for your data. GraphQL
@@ -61,6 +61,69 @@
                         your existing code and data.
                         </blockquote>
                         <p>– <a href="https://graphql.org/learn/">https://graphql.org/learn/</a></p>
+                    </section>
+                    <section>
+                        <h2>What is GraphQL?</h2>
+<pre style="max-width: 900px;"><code style="max-height: none;">query country {
+  country(iso: "US") {
+    iso
+    name
+    cities {
+      geonameID
+      name
+    }
+  }
+}
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>What is GraphQL?</h2>
+<pre style="max-width: 900px;"><code style="max-height: none;">query city_by_id {
+  london: city(geonameID: 2643743) {
+    geonameID
+    name
+    latitude
+    longitude
+    population
+    country {
+      iso
+      name
+    }
+  }
+  new_york: city(geonameID: 5128581) {
+    geonameID
+    name
+    latitude
+    longitude
+    country {
+      iso
+      name
+    }
+  }
+}
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>GraphQL Basics</h2>
+                        <ul>
+                            <li>The Schema Definition Language</li>
+                            <li>Root types: Query, Mutation and Subscription</li>
+                            <li>Resolvers implement the API: each field in a GraphQL schema is backed by a resolver.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2>GraphQL Resolvers</h2>
+                        <img src="resolver.png" />
+                    </section>
+                    <section>
+                        <h2>GraphQL Resolvers: Default</h2>
+<pre style="max-width: 900px;"><code style="max-height: none;" class="python">def default_resolve_fn(source, resolve_info, **kwargs):
+    name = resolve_info.field_name
+    property = getattr(source, name, None)
+    if callable(property):
+        return property()
+    return property
+</code></pre>
                     </section>
                     <section>
                         <h2>Why shouldn't we use GraphQL?</h2>
@@ -84,6 +147,7 @@
                 <section>
                     <section>
                         <h2>Python Support</h2>
+                        <p>23 repositories on <a href="https://github.com/graphql-python/">graphql-python organisation on GitHub</a></p>
                         <ul>
                             <li><a href="https://github.com/graphql-python/graphql-core">graphql-core</a>: GraphQL base implementation for Python</li>
                             <li><a href="https://github.com/graphql-python/flask-graphql">flask-graphql</a>, <a href="https://github.com/graphql-python/sanic-graphql">sanic-graphql</a>, <a href="https://github.com/graphql-python/graphene-django">graphene-django</a>: Integration with common frameworks</li>
@@ -108,31 +172,31 @@
                     </section>
                     <section>
                         <h2>The Schema</h2>
-<pre><code style="max-height: none">type Country {
-        iso: String!
-        name: String!
+<pre style="max-width: 900px;"><code style="max-height: none">type Country {
+    iso: String!
+    name: String!
 
-        cities: [City!]!
-    }
+    cities: [City!]!
+}
 
-    type City {
-        geonameID: Int!
-        name: String!
-        latitude: Float!
-        longitude: Float!
-        population: Int!
+type City {
+    geonameID: Int!
+    name: String!
+    latitude: Float!
+    longitude: Float!
+    population: Int!
 
-        country: Country!
-    }
+    country: Country!
+}
 
-    type Query {
-        country(iso: String): Country!
-        city(name: String, geonameID: Int): City!    
-    }
+type Query {
+    country(iso: String): Country!
+    city(name: String, geonameID: Int): City!    
+}
 
-    schema {
-      query: Query
-    }
+schema {
+  query: Query
+}
 </code></pre>
                     </section>
                     <section>
@@ -162,18 +226,6 @@ class CountryLoader(DataLoader):
                     </section>
                     <section>
                         <h2>The Resolver</h2>
-<pre><code style="max-height: none" class="python">import os
-
-from .models import City
-
-
-def country_resolver(context, resolve_info, *, iso):
-    loader = resolve_info.context['request']['loaders']['country']
-    return loader.load(iso)
-</code></pre>
-                    </section>
-                    <section>
-                        <h2>The Server</h2>
 <pre><code style="max-height: none" class="python">import os
 
 from .models import City
@@ -240,6 +292,14 @@ async def init_graphql(app, loop):
                         <li>GraphQL is fantastic way to define a contract
                         between different parts of your system.</li>
                         <li>The support in Python is awesome.</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>References</h2>
+                    <ul>
+                        <li><a href="https://graphql.org/">GraphQL.org</a>
+                        <li><a href="https://blog.graph.cool/top-5-reasons-to-use-graphql-b60cfa683511">Blog: Top 5 reasons to use GraphQL</a></li>
+                        <li><a href="https://blog.graph.cool/graphql-server-basics-the-schema-ac5e2950214e">Blog: GraphQL Server Basics: GraphQL Schemas, TypeDefs & Resolvers Explained</a></li>
                     </ul>
                 </section>
 			</div>
