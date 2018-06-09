@@ -167,6 +167,7 @@
                             <li>Lookup city by name, geoname ID or country.</li>
                             <li>Lookup country by ISO name.</li>
                         </ul>
+                        <a href="https://github.com/alexchamberlain/city-api/">https://github.com/alexchamberlain/city-api/</a>
                     </section>
                     <section>
                         <h2>The Schema</h2>
@@ -253,9 +254,10 @@ class CountryLoader(DataLoader):
                     </section>
                     <section>
                         <h2>The Server</h2>
-<pre><code style="max-height: none" class="python">from sanic import Sanic
+<pre><code style="max-height: none" class="python">from graphql.execution.executors.asyncio import AsyncioExecutor
 
-app = Sanic()
+from sanic import Sanic
+import sanic_graphql
 
 @app.listener('before_server_start')
 async def init_graphql(app, loop):
@@ -270,11 +272,24 @@ async def init_graphql(app, loop):
         '/graphql',
         methods=['POST', 'OPTIONS']
     )
+
+
+class GraphQLView(sanic_graphql.GraphQLView):
+    def get_context(self, request):
+        return {
+            'db': request['db'],
+            'loaders': {
+                'Country': CountryLoader(request['db']),
+                'City': CityLoader(request['db'])
+            }
+        }
+
 </code></pre>
                     </section>
                     <section>
                         <h2>Whole example</h2>
-                        <a href="https://github.com/alexchamberlain/city-api/">City API in Python</a>
+                        <a href="https://github.com/alexchamberlain/city-api/">City API in Python<br />
+                        https://github.com/alexchamberlain/city-api/</a>
                     </section>
                 </section>
                 <section>
