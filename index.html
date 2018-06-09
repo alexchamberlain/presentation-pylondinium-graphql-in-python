@@ -40,7 +40,8 @@
 				<section>
                     <h1>GraphQL in Python</h1>
                     <p>
-                        <small>Alex Chamberlain, Team Leader @ Bloomberg LP</small>
+                        <small>Alex Chamberlain, Team Leader @ Bloomberg LP</small><br/>
+                        <small>@alexchamberlain</small>
                     </p>
                 </section>
                 <section>
@@ -218,41 +219,34 @@ class CountryLoader(DataLoader):
             ) for row in rows
         }
 
-        return [mapping[i] for i in isos]
-</code></pre>
-                    </section>
-                    <section>
-                        <h2>The Resolver</h2>
-<pre><code style="max-height: none" class="python">import os
+        return [mapping.get(i) for i in isos]
 
-from .models import City
+    def resolver(self, context, resolve_info, *, iso):
+        return self.load(iso)
 
-
-def country_resolver(context, resolve_info, *, iso):
-    loader = resolve_info.context['request']['loaders']['country']
-    return loader.load(iso)
+    def context_resolver(self, context, resolve_info):
+        return self.load(context.country_iso)
 </code></pre>
                     </section>
                     <section>
                         <h2>The Schema (2)</h2>
 <pre><code style="max-height: none" class="python">def build_schema():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    with open(os.path.join(dir_path, '../cities.graphql')) as f:
-        schema = make_executable_schema(
-            parse_schema(f.read()),
-            {
-                'Query': {
-                    'country': country_resolver,
-                    'city': city_resolver
-                },
-                'Country': {
-                    'cities': country_cities_resolver
-                },
-                'City': {
-                    'country': city_country_resolver
-                }
+    data = pkgutil.get_data('cities', 'cities.graphql').decode()
+    schema = make_executable_schema(
+        parse_schema(data),
+        {
+            'Query': {
+                'country': loader_resolver('Country', CountryLoader.resolver),
+                'city': city_resolver
+            },
+            'Country': {
+                'cities': country_cities_resolver
+            },
+            'City': {
+                'country': loader_resolver('Country', CountryLoader.context_resolver)
             }
-        )
+        }
+    )
 
     return schema
 </code></pre>
